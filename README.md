@@ -1,1 +1,1 @@
-# cms-filters
+# cms-query-filters
