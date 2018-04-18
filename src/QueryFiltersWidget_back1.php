@@ -1,22 +1,21 @@
 <?php
 /**
+ * @link https://cms.skeeks.com/
+ * @copyright Copyright (c) 2010 SkeekS
+ * @license https://cms.skeeks.com/license/
  * @author Semenov Alexander <semenov@skeeks.com>
- * @link http://skeeks.com/
- * @copyright 2010 SkeekS (СкикС)
- * @date 25.05.2015
  */
 
 namespace skeeks\cms\queryfilters;
 
 use skeeks\cms\helpers\PaginationConfig;
 use skeeks\cms\IHasModel;
-use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
+use skeeks\yii2\form\fields\SelectField;
 use skeeks\yii2\form\fields\TextField;
 use skeeks\yii2\form\fields\WidgetField;
-use yii\base\Event;
 use yii\base\Model;
 use yii\base\Widget;
 use yii\data\ActiveDataProvider;
@@ -25,27 +24,27 @@ use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 
 /**
- * @property string                $modelClassName; название класса модели с которой идет работа
- * @property DataProviderInterface $dataProvider; готовый датапровайдер с учетом настроек виджета
- * @property array                 $resultColumns; готовый конфиг для построения колонок
- * @property PaginationConfig      $paginationConfig;
- *
- * Class ShopProductFiltersWidget
- * @package skeeks\cms\cmsWidgets\filters
+ * @author Semenov Alexander <semenov@skeeks.com>
  */
 class QueryFiltersWidget extends Widget
 {
-    use ConfigTrait;
-
     /**
      * @var string
      */
-    public $viewFile = '@skeeks/cms/widgets/views/filters';
+    public $viewFile = '@skeeks/cms/queryfilters/views/filters';
+
+
+    /**
+     * @var QueryFilter[]
+     */
+    protected $_filters = [];
+
 
     /**
      * @var ActiveDataProvider
      */
     public $dataProvider;
+
 
     /**
      * @var array по умолчанию включенные колонки
@@ -79,72 +78,78 @@ class QueryFiltersWidget extends Widget
         //'class' => ActiveForm::class
     ];
 
-    public function behaviors()
-    {
-        return ArrayHelper::merge(parent::behaviors(), [
-            ConfigBehavior::class => ArrayHelper::merge([
-                'class'       => ConfigBehavior::class,
-                'configModel' => [
-                    'fields'           => [
-                        'visibleFilters' => [
-                            'class'           => WidgetField::class,
-                            'widgetClass'     => DualSelect::class,
-                            'widgetConfig'    => [
-                                'visibleLabel' => \Yii::t('skeeks/cms', 'Display columns'),
-                                'hiddenLabel'  => \Yii::t('skeeks/cms', 'Hidden columns'),
-                            ],
-                            'on beforeRender' => function ($e) {
-                                $widgetField = $e->sender;
-                                $widgetField->widgetConfig['items'] = ArrayHelper::getValue(
-                                    \Yii::$app->controller->getCallableData(),
-                                    'availableColumns'
-                                );
-                            },
-                        ],
-                    ],
-                    'attributeDefines' => [
-                        'visibleFilters',
-                    ],
-                    'attributeLabels'  => [
-                        'visibleFilters' => 'Отображаемые фильтры',
-                    ],
-                    'rules'            => [
-                        ['visibleFilters', 'safe'],
-                    ],
-                ],
-            ], (array)$this->configBehaviorData),
-        ]);
-    }
-
     /**
      *
      */
     public function init()
     {
         $defaultFiltersModel = [
-            'class' => DynamicConfigModel::class,
-            'formName' => 'f' . $this->id
+           'class' => DynamicConfigModel::class,
         ];
 
         //Автомтическое конфигурирование колонок
         $this->_initAutoFilters();
 
-        $defaultFiltersModel = ArrayHelper::merge((array)$this->_autoDynamicModelData, $defaultFiltersModel);
+        $defaultFiltersModel = ArrayHelper::merge((array) $this->_autoDynamicModelData, $defaultFiltersModel);
 
-        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
+        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array) $this->filtersModel);
         $this->filtersModel = \Yii::createObject($this->filtersModel);
-
         $this->filtersModel->load(\Yii::$app->request->get());
+
+        if ($this->filtersModel->builderFields()) {
+            foreach ($this->filtersModel->builderFields() as $key => $field)
+            {
+
+            }
+        }
 
         $defaultActiveForm = [
             'action' => [''],
             'method' => 'get',
             //'layout' => 'horizontal',
-            'class'  => ActiveForm::class,
+            'class' => ActiveForm::class,
         ];
 
         $this->activeForm = ArrayHelper::merge($defaultActiveForm, $this->activeForm);
 
+
+
+        if ($this->_filters) {
+            /**
+             *
+             */
+            $tmpFilters = [];
+            foreach ($this->_filters as $key => $value)
+            {
+                if (!ArrayHelper::getValue($value, 'attribute')) {
+                    $value['attribute'] = $key;
+                }
+
+                /**
+                 * @var $filter QueryFilter
+                 */
+                $filter = \Yii::createObject($value);
+                $tmpFilters[$key] = $filter;
+
+                $attributeDefines[] = $filter->attribute;
+                $attributeLabels[$filter->attribute] = $filter->name;
+                $rules[] = [$filter->attribute, 'safe'];
+                $fields[$filter->attribute] = [
+                    'class' => TextField::class,
+                ];
+            }
+
+            $this->_filters = $tmpFilters;
+
+            $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, [
+                'attributeDefines' => $attributeDefines,
+                'attributeLabels' => $attributeLabels,
+                'rules' => $rules,
+                'fields' => $fields,
+            ]);
+
+            $this->filtersModel = \Yii::createObject($this->filtersModel);
+        }
         parent::init();
 
         //Применение включенных/выключенных фильтров
@@ -155,42 +160,7 @@ class QueryFiltersWidget extends Widget
     {
         $this->wrapperOptions['id'] = $this->id;
 
-        //Only visibles
-        /*if ($this->filtersModel->builderFields()) {
-            foreach ($this->filtersModel->builderFields() as $key => $field) {
-                if (isset($field['on apply'])) {
-
-                }
-            }
-        }*/
-
-        $builder = new \skeeks\yii2\form\Builder([
-            'models'     => $this->filtersModel->builderModels(),
-            'model'      => $this->filtersModel,
-            'fields'     => $this->filtersModel->builderFields(),
-        ]);
-
-        if ($builder->fields) {
-            foreach ($builder->fields as $field)
-            {
-                $field->trigger('apply', new QueryFiltersEvent([
-                    'field' => $field,
-                    'widget' => $this,
-                    'dataProvider' => $this->dataProvider,
-                    'query' => $this->dataProvider->query,
-                ]));
-            }
-        }
-
-        $this->trigger('apply', new QueryFiltersEvent([
-            'widget' => $this,
-            'dataProvider' => $this->dataProvider,
-            'query' => $this->dataProvider->query,
-        ]));
-
-        return $this->render($this->viewFile, [
-            'builder' => $builder
-        ]);
+        return $this->render($this->viewFile);
     }
 
 
@@ -216,6 +186,8 @@ class QueryFiltersWidget extends Widget
 
         return $this;
     }
+
+
 
 
     private $_autoDynamicModelData = [];
@@ -257,11 +229,6 @@ class QueryFiltersWidget extends Widget
                 if ($value === null || is_scalar($value) || is_callable([$value, '__toString'])) {
                     $fields[(string)$name] = [
                         'class' => TextField::class,
-                        'on apply' => function(\skeeks\cms\queryfilters\QueryFiltersEvent $event) {
-                            if ($event->field->value) {
-                                $event->query->andWhere(['like', $event->field->attribute, $event->field->value]);
-                            }
-                        }
                     ];
 
                     $rules[] = [(string)$name, 'safe'];
@@ -304,8 +271,24 @@ class QueryFiltersWidget extends Widget
     public function getEditData()
     {
         return [
-            'callAttributes'   => $this->callAttributes,
+            'callAttributes' => $this->callAttributes,
             'availableColumns' => $this->filtersModel->attributeLabels(),
         ];
+    }
+
+
+    public function setFilters($filters)
+    {
+        $this->_filters = $filters;
+        return $this;
+    }
+    public function getFilters()
+    {
+        /*foreach ($this->_filters as $ => $)
+        {
+
+        }*/
+
+        return $this->_filters;
     }
 }

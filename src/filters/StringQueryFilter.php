@@ -20,6 +20,10 @@ class StringQueryFilter extends QueryFilter
      * @var
      */
     public $value;
+    /**
+     * @var
+     */
+    public $attribute;
 
     /**
      * @param ActiveQueryInterface $activeQuery
@@ -27,23 +31,24 @@ class StringQueryFilter extends QueryFilter
      */
     public function apply(ActiveQueryInterface $activeQuery)
     {
+        $activeQuery->andWhere(['like', $this->attribute, $this->value]);
         return $this;
     }
 
     /**
      * @return array
      */
-    public function attributeLabels()
+    /*public function attributeLabels()
     {
         return [
             'value' => $this->name
         ];
-    }
+    }*/
 
     /**
      * @return array
      */
-    public function rules()
+    /*public function rules()
     {
         return [
             ['value', 'string']
@@ -55,5 +60,5 @@ class StringQueryFilter extends QueryFilter
         return [
             'value'
         ];
-    }
+    }*/
 }
