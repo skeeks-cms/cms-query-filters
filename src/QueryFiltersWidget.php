@@ -1,9 +1,9 @@
 <?php
 /**
+ * @link https://cms.skeeks.com/
+ * @copyright Copyright (c) 2010 SkeekS
+ * @license https://cms.skeeks.com/license/
  * @author Semenov Alexander <semenov@skeeks.com>
- * @link http://skeeks.com/
- * @copyright 2010 SkeekS (СкикС)
- * @date 25.05.2015
  */
 
 namespace skeeks\cms\queryfilters;
@@ -24,27 +24,27 @@ use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 
 /**
- * @property string                $modelClassName; название класса модели с которой идет работа
- * @property DataProviderInterface $dataProvider; готовый датапровайдер с учетом настроек виджета
- * @property array                 $resultColumns; готовый конфиг для построения колонок
- * @property PaginationConfig      $paginationConfig;
- *
- * Class ShopProductFiltersWidget
- * @package skeeks\cms\cmsWidgets\filters
+ * @author Semenov Alexander <semenov@skeeks.com>
  */
 class QueryFiltersWidget extends Widget
 {
-    use ConfigTrait;
-
     /**
      * @var string
      */
-    public $viewFile = '@skeeks/cms/widgets/views/filters';
+    public $viewFile = '@skeeks/cms/queryfilters/views/filters';
+
+
+    /**
+     * @var QueryFilter[]
+     */
+    public $filters = [];
+
 
     /**
      * @var ActiveDataProvider
      */
     public $dataProvider;
+
 
     /**
      * @var array по умолчанию включенные колонки
@@ -77,43 +77,6 @@ class QueryFiltersWidget extends Widget
     public $activeForm = [
         //'class' => ActiveForm::class
     ];
-
-    public function behaviors()
-    {
-        return ArrayHelper::merge(parent::behaviors(), [
-            ConfigBehavior::class => ArrayHelper::merge([
-                'class'       => ConfigBehavior::class,
-                'configModel' => [
-                    'fields'           => [
-                        'visibleFilters' => [
-                            'class'           => WidgetField::class,
-                            'widgetClass'     => DualSelect::class,
-                            'widgetConfig'    => [
-                                'visibleLabel' => \Yii::t('skeeks/cms', 'Display columns'),
-                                'hiddenLabel' => \Yii::t('skeeks/cms', 'Hidden columns'),
-                            ],
-                            'on beforeRender' => function ($e) {
-                                $widgetField = $e->sender;
-                                $widgetField->widgetConfig['items'] = ArrayHelper::getValue(
-                                    \Yii::$app->controller->getCallableData(),
-                                    'availableColumns'
-                                );
-                            },
-                        ],
-                    ],
-                    'attributeDefines' => [
-                        'visibleFilters',
-                    ],
-                    'attributeLabels'  => [
-                        'visibleFilters' => 'Отображаемые фильтры',
-                    ],
-                    'rules'            => [
-                        ['visibleFilters', 'safe'],
-                    ],
-                ],
-            ], (array)$this->configBehaviorData),
-        ]);
-    }
 
     /**
      *

@@ -23,11 +23,5 @@
         "psr-4": {
             "skeeks\\cms\\queryfilters\\": "src/"
         }
-    },
-	"extra": {
-        "config-plugin": {
-            "web": "src/config/main.php",
-            "console": "src/config/main.php"
-        }
     }
 }
