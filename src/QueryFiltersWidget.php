@@ -10,6 +10,7 @@ namespace skeeks\cms\queryfilters;
 
 use skeeks\cms\helpers\PaginationConfig;
 use skeeks\cms\IHasModel;
+use skeeks\cms\queryfilters\filters\StringFilterField;
 use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
@@ -40,7 +41,7 @@ class QueryFiltersWidget extends Widget
     /**
      * @var string
      */
-    public $viewFile = '@skeeks/cms/widgets/views/filters';
+    public $viewFile = '@skeeks/cms/queryfilters/views/filters';
 
     /**
      * @var ActiveDataProvider
@@ -171,6 +172,7 @@ class QueryFiltersWidget extends Widget
         ]);
 
         if ($builder->fields) {
+
             foreach ($builder->fields as $field)
             {
                 $field->trigger('apply', new QueryFiltersEvent([
@@ -256,12 +258,12 @@ class QueryFiltersWidget extends Widget
             foreach ($model as $name => $value) {
                 if ($value === null || is_scalar($value) || is_callable([$value, '__toString'])) {
                     $fields[(string)$name] = [
-                        'class' => TextField::class,
-                        'on apply' => function(\skeeks\cms\queryfilters\QueryFiltersEvent $event) {
+                        'class' => StringFilterField::class,
+                        /*'on apply' => function(\skeeks\cms\queryfilters\QueryFiltersEvent $event) {
                             if ($event->field->value) {
                                 $event->query->andWhere(['like', $event->field->attribute, $event->field->value]);
                             }
-                        }
+                        }*/
                     ];
 
                     $rules[] = [(string)$name, 'safe'];
