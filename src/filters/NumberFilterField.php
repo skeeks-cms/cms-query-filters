@@ -13,10 +13,10 @@ use skeeks\yii2\form\Field;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
 
-class StringFilterField extends Field
+class NumberFilterField extends Field
 {
 
-    const MODE_LIKE = 'like';
+    const MODE_RANGE = 'range';
     const MODE_EQUALLY = 'equally';
     const MODE_NOT_EMPTY = 'not_empty';
     const MODE_EMPTY = 'empty';
@@ -25,7 +25,7 @@ class StringFilterField extends Field
     /**
      * @var string
      */
-    public $defaultMode = self::MODE_LIKE;
+    public $defaultMode = self::MODE_RANGE;
 
 
     public function init()
@@ -44,7 +44,7 @@ class StringFilterField extends Field
 
         if (!$mode) {
             return;
-        } elseif ($mode == self::MODE_LIKE) {
+        } elseif ($mode == self::MODE_RANGE) {
             $queryFiltersEvent->query->andWhere(['like', $queryFiltersEvent->field->attribute, $value]);
         } elseif ($mode == self::MODE_EQUALLY) {
             $queryFiltersEvent->query->andWhere([$queryFiltersEvent->field->attribute => $value]);
@@ -72,7 +72,7 @@ class StringFilterField extends Field
             throw new InvalidConfigException('Not found form or model or attribute');
         }
 
-        $activeField = $this->_activeForm->field($this->_model, $this->_attribute."[value]", $this->_options);
+        $activeField = $this->_activeForm->field($this->_model, $this->_attribute."[value][0]", $this->_options);
 
         if ($this->label !== null || $this->labelOptions) {
             $activeField->label($this->label, $this->labelOptions);
@@ -84,10 +84,14 @@ class StringFilterField extends Field
 
         $activeField->textInput();
 
+        $input2 = (string) Html::activeTextInput($this->model, $this->attribute."[value][1]", [
+            'class' => 'form-control'
+        ]);
+
         $mode = (string) Html::activeListBox($this->model, $this->attribute."[mode]", [
             ''          => ' -- ',
-            'like'      => 'Содержит',
-            'equally'   => 'Точно совпадает с',
+            'range'      => 'Диапазон',
+            'equally'   => 'Равно',
             'not_empty' => 'Значение заполнено',
             'empty'     => 'Значение не заполнено',
         ],
@@ -99,7 +103,8 @@ class StringFilterField extends Field
         $activeField->parts['{input}'] = "
             <div class='row'>           
                 <div class='col-md-3'>{$mode}</div>            
-                <div class='col-md-9 sx-input'>" . $activeField->parts['{input}'] . "</div>         
+                <div class='col-md-3 sx-input'>" . $activeField->parts['{input}'] . "</div>         
+                <div class='col-md-3 sx-input-2'>{$input2}</div>         
             </div>
         ";
 

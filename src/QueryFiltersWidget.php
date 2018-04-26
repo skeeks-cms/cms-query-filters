@@ -10,6 +10,7 @@ namespace skeeks\cms\queryfilters;
 
 use skeeks\cms\helpers\PaginationConfig;
 use skeeks\cms\IHasModel;
+use skeeks\cms\queryfilters\filters\NumberFilterField;
 use skeeks\cms\queryfilters\filters\StringFilterField;
 use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
@@ -22,6 +23,8 @@ use yii\base\Model;
 use yii\base\Widget;
 use yii\data\ActiveDataProvider;
 use yii\data\DataProviderInterface;
+use yii\db\ActiveRecord;
+use yii\db\ColumnSchema;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 
@@ -243,8 +246,11 @@ class QueryFiltersWidget extends Widget
 
         /**
          * @var $model Model
+         * @var $model ActiveRecord
          */
         $model = reset($models);
+
+
 
         $result = [];
 
@@ -254,16 +260,29 @@ class QueryFiltersWidget extends Widget
         $rules = [];
         $fields = [];
 
-        if (is_array($model) || is_object($model)) {
+        if ($model instanceof ActiveRecord) {
+            foreach ($model::getTableSchema()->columns as $key => $column)
+            {
+                if (in_array($column->type, ['string', 'text'])) {
+                    $fields[(string)$key] = [
+                        'class' => StringFilterField::class,
+                    ];
+
+                    $rules[] = [(string)$key, 'safe'];
+                } else if (in_array($column->type, ['integer', 'decimal'])) {
+                    $fields[(string)$key] = [
+                        'class' => NumberFilterField::class,
+                    ];
+
+                    $rules[] = [(string)$key, 'safe'];
+                }
+
+            }
+        } elseif (is_array($model) || is_object($model)) {
             foreach ($model as $name => $value) {
                 if ($value === null || is_scalar($value) || is_callable([$value, '__toString'])) {
                     $fields[(string)$name] = [
                         'class' => StringFilterField::class,
-                        /*'on apply' => function(\skeeks\cms\queryfilters\QueryFiltersEvent $event) {
-                            if ($event->field->value) {
-                                $event->query->andWhere(['like', $event->field->attribute, $event->field->value]);
-                            }
-                        }*/
                     ];
 
                     $rules[] = [(string)$name, 'safe'];
