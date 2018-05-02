@@ -23,6 +23,7 @@ use yii\base\Model;
 use yii\base\Widget;
 use yii\data\ActiveDataProvider;
 use yii\data\DataProviderInterface;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\db\ColumnSchema;
 use yii\helpers\ArrayHelper;
@@ -55,6 +56,11 @@ class QueryFiltersWidget extends Widget
      * @var array по умолчанию включенные колонки
      */
     public $visibleFilters = [];
+
+    /**
+     * @var array
+     */
+    public $filterValues = [];
 
     /**
      * @var array
@@ -108,12 +114,15 @@ class QueryFiltersWidget extends Widget
                     ],
                     'attributeDefines' => [
                         'visibleFilters',
+                        'filterValues',
                     ],
                     'attributeLabels'  => [
                         'visibleFilters' => 'Отображаемые фильтры',
+                        'filterValues' => 'Значение фильтров',
                     ],
                     'rules'            => [
                         ['visibleFilters', 'safe'],
+                        ['filterValues', 'safe'],
                     ],
                 ],
             ], (array)$this->configBehaviorData),
@@ -138,10 +147,10 @@ class QueryFiltersWidget extends Widget
         $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
         $this->filtersModel = \Yii::createObject($this->filtersModel);
 
-        $this->filtersModel->load(\Yii::$app->request->get());
+
 
         $defaultActiveForm = [
-            'action' => [''],
+            //'action' => [''],
             'method' => 'get',
             //'layout' => 'horizontal',
             'class'  => ActiveForm::class,
@@ -149,11 +158,33 @@ class QueryFiltersWidget extends Widget
 
         $this->activeForm = ArrayHelper::merge($defaultActiveForm, $this->activeForm);
 
+        //$this->_initDataProviderFrom($this->dataProvider);
+
         parent::init();
+
+        $this->filtersModel->setAttributes((array) $this->filterValues);
+        $this->filtersModel->load(\Yii::$app->request->get());
 
         //Применение включенных/выключенных фильтров
         $this->_applyFilters();
     }
+
+    /*public $asModelTable = '';
+
+    protected function _initDataProviderFrom(ActiveDataProvider $dataProvider) {
+
+        /**
+         * @var $query ActiveQuery
+        $query = $dataProvider->query;
+        if ($query && $query->modelClass && !$query->from) {
+
+            $modelClass = $query->modelClass;
+            $tableName = $modelClass::tableName();
+
+            $this->asModelTable = 'fff';
+            $query->from([$this->asModelTable => $tableName]);
+        }
+    }*/
 
     public function run()
     {
