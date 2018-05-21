@@ -64,13 +64,14 @@ class FilterField extends Field
         return [
             FilterModeEmpty::class,
             FilterModeNotEmpty::class,
-            FilterModeEq::class,
+
+            /*FilterModeEq::class,
             FilterModeNe::class,
             FilterModeGt::class,
             FilterModeLt::class,
             FilterModeGte::class,
             FilterModeLte::class,
-            FilterModeLike::class,
+            FilterModeLike::class,*/
         ];
     }
     /**
@@ -223,7 +224,7 @@ class FilterField extends Field
             'size'    => 1,
             'class'   => 'form-control sx-filter-mode',
         ];
-        
+
         if (!$mode = ArrayHelper::getValue($this->model->{$this->attribute}, 'mode')) {
             $opts['value'] = $this->defaultMode;
         }
@@ -247,6 +248,7 @@ class FilterField extends Field
 
         $jsOptions = Json::encode([
             'id' => $this->id,
+            'isAllowChangeMode' => $this->isAllowChangeMode,
         ]);
 
         $this->registerAssets();
@@ -287,7 +289,16 @@ JS
         
         update: function()
         {
-            this.jFilterInput.removeClass('col-md-8').addClass('col-md-4');
+            var big = 'col-md-8';
+            var small = 'col-md-4';
+            
+            if (!this.get('isAllowChangeMode')) {
+                var big = 'col-md-12'
+                var small = 'col-md-6'
+            }
+            
+            this.jFilterInput.removeClass('col-md-4').removeClass('col-md-6').removeClass('col-md-12').addClass(small);
+            
             this.jFilterInput.hide();
             this.jFilterInput2.hide();
             
@@ -305,7 +316,7 @@ JS
                 }
                 
                 if (jModeOption.data('isvalue') && !jModeOption.data('isvalue2')) {
-                    this.jFilterInput.removeClass('col-md-4').addClass('col-md-8');
+                    this.jFilterInput.removeClass('col-md-4').removeClass('col-md-6').removeClass('col-md-12').addClass(big);
                 }
             }
             

@@ -8,28 +8,33 @@
 
 namespace skeeks\cms\queryfilters\filters;
 
+use skeeks\cms\queryfilters\filters\modes\FilterModeEmpty;
 use skeeks\cms\queryfilters\filters\modes\FilterModeEq;
 use skeeks\cms\queryfilters\filters\modes\FilterModeEqually;
-use skeeks\cms\queryfilters\filters\modes\FilterModeLike;
+use skeeks\cms\queryfilters\filters\modes\FilterModeGt;
+use skeeks\cms\queryfilters\filters\modes\FilterModeGte;
+use skeeks\cms\queryfilters\filters\modes\FilterModeLt;
+use skeeks\cms\queryfilters\filters\modes\FilterModeLte;
+use skeeks\cms\queryfilters\filters\modes\FilterModeNe;
+use skeeks\cms\queryfilters\filters\modes\FilterModeNotEmpty;
 use skeeks\cms\queryfilters\filters\modes\FilterModeRange;
-use yii\helpers\ArrayHelper;
 
+/**
+ * @author Semenov Alexander <semenov@skeeks.com>
+ */
 class NumberFilterField extends FilterField
 {
     public $defaultMode = FilterModeEq::ID;
-    
-    public function init()
-    {
-        if (!$this->modes) {
-            $this->modes = $this->getBaseModes();
-            $modes = $this->modes;
-            ArrayHelper::removeValue($modes, FilterModeLike::class);
-            $this->modes = $modes;
-        } else {
 
-        }
-        
-        parent::init();
-    }
-    
+    public $modes = [
+        FilterModeEmpty::class,
+        FilterModeNotEmpty::class,
+        FilterModeEq::class,
+        FilterModeNe::class,
+        FilterModeGt::class,
+        FilterModeLt::class,
+        FilterModeGte::class,
+        FilterModeLte::class,
+        FilterModeRange::class,
+    ];
 }

@@ -16,6 +16,7 @@ use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
+use skeeks\yii2\form\fields\SelectField;
 use skeeks\yii2\form\fields\TextField;
 use skeeks\yii2\form\fields\WidgetField;
 use yii\base\Event;
@@ -27,6 +28,7 @@ use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\db\ColumnSchema;
 use yii\helpers\ArrayHelper;
+use yii\helpers\Inflector;
 use yii\widgets\ActiveForm;
 
 /**
@@ -281,7 +283,10 @@ class QueryFiltersWidget extends Widget
          */
         $model = reset($models);
 
-
+        if (!$model) {
+            $modelClass = $dataProvider->query->modelClass;
+            $model = new $modelClass();
+        }
 
         $result = [];
 
@@ -301,8 +306,69 @@ class QueryFiltersWidget extends Widget
 
                     $rules[] = [(string)$key, 'safe'];
                 } else if (in_array($column->type, ['integer', 'decimal'])) {
+
+                    $realKey = $key;
+                    if (!empty($key) && strcasecmp($key, 'id')) {
+                        if (substr_compare($key, 'id', -2, 2, true) === 0) {
+                            $key = rtrim(substr($key, 0, -2), '_');
+                        } elseif (substr_compare($key, 'id', 0, 2, true) === 0) {
+                            $key = ltrim(substr($key, 2, strlen($key)), '_');
+                        }
+                    }
+
+                    $keyMany = Inflector::pluralize($key);
+
+                    $keyName = lcfirst(Inflector::id2camel($key, '_'));
+                    $keyManyName = lcfirst(Inflector::id2camel($keyMany, '_'));
+
+
+                    if ($relation = $model->getRelation($keyName, false)) {
+                        if ($relation->modelClass && $relation->link) {
+
+                            $arr = array_keys($relation->link);
+                            $idName = $arr[0];
+                            $modelClassName = $relation->modelClass;
+
+                            $query = $modelClassName::find();
+
+                            if ($query->count() > 1000) {
+                                $fields[(string)$realKey] = [
+                                    'class' => NumberFilterField::class,
+                                ];
+                            } else {
+                                $fields[(string)$realKey] = [
+                                    'class' => NumberFilterField::class,
+                                    'isAllowChangeMode' => false,
+                                    'field'             => [
+                                        'class' => SelectField::class,
+                                        'items' => function() use ($idName, $query) {
+
+                                            return ArrayHelper::map(
+                                                $query->all(),
+                                                $idName,
+                                                'asText'
+                                            );
+                                        },
+                                        'multiple' => true
+                                    ],
+                                ];
+                            }
+
+                        }
+
+                    }
+
+                    if (!isset($fields[(string)$realKey])) {
+                        $fields[(string)$realKey] = [
+                            'class' => NumberFilterField::class,
+                        ];
+                    }
+
+                    $rules[] = [(string)$realKey, 'safe'];
+
+                } else {
                     $fields[(string)$key] = [
-                        'class' => NumberFilterField::class,
+                        'class' => StringFilterField::class,
                     ];
 
                     $rules[] = [(string)$key, 'safe'];

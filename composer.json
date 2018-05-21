@@ -1,24 +1,31 @@
 {
-	"name": "skeeks/cms-query-filters",
-	"description": "SkeekS CMS backend",
-	"keywords": ["yii", "skeeks", "framework", "component"],
-  	"homepage": "https://cms.skeeks.com/",
-	"type": "yii2-extension",
-	"license": "GPL-3.0+",
-	"support": {
+    "name": "skeeks/cms-query-filters",
+    "description": "Query filters widget for SkeekS CMS",
+    "keywords": [
+        "yii",
+        "yii2",
+        "framework",
+        "skeeks",
+        "cms",
+        "component"
+    ],
+    "homepage": "https://cms.skeeks.com/",
+    "type": "yii2-extension",
+    "license": "BSD-3-Clause",
+    "support": {
         "issues": "https://skeeks.com/",
         "wiki": "https://cms.skeeks.com/docs",
-        "source": "https://github.com/skeeks-cms/cms-backend.git"
+        "source": "https://github.com/skeeks-cms/cms-query-filters.git"
     },
-	"authors": [
-		{
-			"name": "Semenov Alexander",
-			"email": "semenov@skeeks.com"
-		}
-	],
-	"require": {
-		"skeeks/cms": "~5.0 || dev-master"
-	},
+    "authors": [
+        {
+            "name": "Semenov Alexander",
+            "email": "semenov@skeeks.com"
+        }
+    ],
+    "require": {
+        "skeeks/cms": "^5.0.4 || dev-master"
+    },
     "autoload": {
         "psr-4": {
             "skeeks\\cms\\queryfilters\\": "src/"
