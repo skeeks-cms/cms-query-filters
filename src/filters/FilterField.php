@@ -209,7 +209,7 @@ class FilterField extends Field
 
             foreach ($this->modes as $key => $mode) {
                 if (!$mode instanceof FilterMode) {
-                    var_dump($mode);die;
+                    //var_dump($mode);die;
                 }
                 $modes[$key] = $mode->name;
                 $modesOptions[$key] = [
