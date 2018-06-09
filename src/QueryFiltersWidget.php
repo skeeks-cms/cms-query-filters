@@ -215,7 +215,7 @@ class QueryFiltersWidget extends Widget
                     'field' => $field,
                     'widget' => $this,
                     'dataProvider' => $this->dataProvider,
-                    'query' => $this->dataProvider->query,
+                    'query' => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
                 ]));
             }
         }
@@ -223,7 +223,7 @@ class QueryFiltersWidget extends Widget
         $this->trigger('apply', new QueryFiltersEvent([
             'widget' => $this,
             'dataProvider' => $this->dataProvider,
-            'query' => $this->dataProvider->query,
+            'query' => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
         ]));
 
         return $this->render($this->viewFile, [
@@ -290,8 +290,16 @@ class QueryFiltersWidget extends Widget
 
         $result = [];
 
-        $result['attributeDefines'] = $model->attributes();
-        $result['attributeLabels'] = $model->attributeLabels();
+        $result['attributeDefines'] = [];
+        if (method_exists($model, 'attributes')) {
+            $result['attributeDefines'] = $model->attributes();
+        }
+
+        $result['attributeLabels'] = [];
+        if (method_exists($model, 'attributeLabels')) {
+            $result['attributeDefines'] = $model->attributeLabels();
+        }
+
 
         $rules = [];
         $fields = [];

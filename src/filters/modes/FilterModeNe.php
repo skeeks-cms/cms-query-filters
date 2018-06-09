@@ -38,7 +38,7 @@ class FilterModeNe extends FilterMode
      */
     public function applyQuery(ActiveQuery $activeQuery)
     {
-        if (!$this->value) {
+        if (is_string($this->value) && $this->value == '') {
             return;
         }
         

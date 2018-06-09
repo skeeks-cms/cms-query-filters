@@ -12,7 +12,9 @@ use skeeks\cms\queryfilters\filters\modes\FilterModeEmpty;
 use skeeks\cms\queryfilters\filters\modes\FilterModeEq;
 use skeeks\cms\queryfilters\filters\modes\FilterModeEqually;
 use skeeks\cms\queryfilters\filters\modes\FilterModeLike;
+use skeeks\cms\queryfilters\filters\modes\FilterModeNe;
 use skeeks\cms\queryfilters\filters\modes\FilterModeNotEmpty;
+use skeeks\cms\queryfilters\filters\modes\FilterModeNotLike;
 
 /**
  * @author Semenov Alexander <semenov@skeeks.com>
@@ -26,5 +28,7 @@ class StringFilterField extends FilterField
         FilterModeNotEmpty::class,
         FilterModeEq::class,
         FilterModeLike::class,
+        FilterModeNe::class,
+        FilterModeNotLike::class,
     ];
 }
