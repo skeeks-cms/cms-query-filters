@@ -297,7 +297,7 @@ class QueryFiltersWidget extends Widget
 
         $result['attributeLabels'] = [];
         if (method_exists($model, 'attributeLabels')) {
-            $result['attributeDefines'] = $model->attributeLabels();
+            $result['attributeLabels'] = $model->attributeLabels();
         }
 
 
