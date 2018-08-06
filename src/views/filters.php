@@ -34,7 +34,7 @@ echo $builder->render();
         </div>
     </div>
 </div>
-
+<input type="hidden" value="1" name="<?= $widget->filtersSubmitKey; ?>">
 <?
 $activeFormClassName::end();
 ?>
