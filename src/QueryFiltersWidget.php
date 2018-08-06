@@ -17,16 +17,12 @@ use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
 use skeeks\yii2\form\fields\SelectField;
-use skeeks\yii2\form\fields\TextField;
 use skeeks\yii2\form\fields\WidgetField;
-use yii\base\Event;
 use yii\base\Model;
 use yii\base\Widget;
 use yii\data\ActiveDataProvider;
 use yii\data\DataProviderInterface;
-use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
-use yii\db\ColumnSchema;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 use yii\widgets\ActiveForm;
@@ -36,6 +32,7 @@ use yii\widgets\ActiveForm;
  * @property DataProviderInterface $dataProvider; готовый датапровайдер с учетом настроек виджета
  * @property array                 $resultColumns; готовый конфиг для построения колонок
  * @property PaginationConfig      $paginationConfig;
+ * @property string                $filtersSubmitKey;
  *
  * Class ShopProductFiltersWidget
  * @package skeeks\cms\cmsWidgets\filters
@@ -90,7 +87,7 @@ class QueryFiltersWidget extends Widget
     public $activeForm = [
         //'class' => ActiveForm::class
     ];
-
+    private $_autoDynamicModelData = [];
     public function behaviors()
     {
         return ArrayHelper::merge(parent::behaviors(), [
@@ -120,7 +117,7 @@ class QueryFiltersWidget extends Widget
                     ],
                     'attributeLabels'  => [
                         'visibleFilters' => 'Отображаемые фильтры',
-                        'filterValues' => 'Значение фильтров',
+                        'filterValues'   => 'Значение фильтров',
                     ],
                     'rules'            => [
                         ['visibleFilters', 'safe'],
@@ -129,46 +126,6 @@ class QueryFiltersWidget extends Widget
                 ],
             ], (array)$this->configBehaviorData),
         ]);
-    }
-
-    /**
-     *
-     */
-    public function init()
-    {
-        $defaultFiltersModel = [
-            'class' => DynamicConfigModel::class,
-            'formName' => 'f' . $this->id
-        ];
-
-        //Автомтическое конфигурирование колонок
-        $this->_initAutoFilters();
-
-        $defaultFiltersModel = ArrayHelper::merge((array)$this->_autoDynamicModelData, $defaultFiltersModel);
-
-        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
-        $this->filtersModel = \Yii::createObject($this->filtersModel);
-
-
-
-        $defaultActiveForm = [
-            //'action' => [''],
-            'method' => 'get',
-            //'layout' => 'horizontal',
-            'class'  => ActiveForm::class,
-        ];
-
-        $this->activeForm = ArrayHelper::merge($defaultActiveForm, $this->activeForm);
-
-        //$this->_initDataProviderFrom($this->dataProvider);
-
-        parent::init();
-
-        $this->filtersModel->setAttributes((array) $this->filterValues);
-        $this->filtersModel->load(\Yii::$app->request->get());
-
-        //Применение включенных/выключенных фильтров
-        $this->_applyFilters();
     }
 
     /*public $asModelTable = '';
@@ -187,77 +144,56 @@ class QueryFiltersWidget extends Widget
             $query->from([$this->asModelTable => $tableName]);
         }
     }*/
-
-    public function run()
+    /**
+     *
+     */
+    public function init()
     {
-        $this->wrapperOptions['id'] = $this->id;
+        $defaultFiltersModel = [
+            'class'    => DynamicConfigModel::class,
+            'formName' => 'f'.$this->id,
+        ];
 
-        //Only visibles
-        /*if ($this->filtersModel->builderFields()) {
-            foreach ($this->filtersModel->builderFields() as $key => $field) {
-                if (isset($field['on apply'])) {
+        //Автомтическое конфигурирование колонок
+        $this->_initAutoFilters();
 
-                }
-            }
-        }*/
+        $defaultFiltersModel = ArrayHelper::merge((array)$this->_autoDynamicModelData, $defaultFiltersModel);
 
-        $builder = new \skeeks\yii2\form\Builder([
-            'models'     => $this->filtersModel->builderModels(),
-            'model'      => $this->filtersModel,
-            'fields'     => $this->filtersModel->builderFields(),
-        ]);
+        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
+        $this->filtersModel = \Yii::createObject($this->filtersModel);
 
-        if ($builder->fields) {
 
-            foreach ($builder->fields as $field)
-            {
-                $field->trigger('apply', new QueryFiltersEvent([
-                    'field' => $field,
-                    'widget' => $this,
-                    'dataProvider' => $this->dataProvider,
-                    'query' => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
-                ]));
-            }
+        $defaultActiveForm = [
+            //'action' => [''],
+            'method' => 'get',
+            //'layout' => 'horizontal',
+            'class'  => ActiveForm::class,
+        ];
+
+        $this->activeForm = ArrayHelper::merge($defaultActiveForm, $this->activeForm);
+
+        //$this->_initDataProviderFrom($this->dataProvider);
+
+        parent::init();
+
+        $this->filtersModel->setAttributes((array)$this->filterValues);
+
+
+        $sessionKey = md5($this->configBehavior->configKey.$this->configBehavior->configStorage->modelClassName.$this->configBehavior->configStorage->primaryKey);
+
+        if ($sessionData = \Yii::$app->session->get($sessionKey)) {
+            $this->filtersModel->load($sessionData);
         }
 
-        $this->trigger('apply', new QueryFiltersEvent([
-            'widget' => $this,
-            'dataProvider' => $this->dataProvider,
-            'query' => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
-        ]));
-
-        return $this->render($this->viewFile, [
-            'builder' => $builder
-        ]);
-    }
-
-
-    protected function applyColumns()
-    {
-        $result = [];
-        //Есть логика включенных выключенных колонок
-        if ($this->visibleFilters && $this->columns) {
-
-            foreach ($this->visibleColumns as $key) {
-                $result[$key] = ArrayHelper::getValue($this->columns, $key);
-            }
-
-            /*foreach ($this->_resultColumns as $key => $config) {
-                $config['visible'] = false;
-                $this->_resultColumns[$key] = $config;
-            }*/
-
-            /*$result = ArrayHelper::merge($result, $this->_resultColumns);
-            $this->_resultColumns = $result;*/
-            $this->columns = $result;
+        if (\Yii::$app->request->get($this->filtersSubmitKey)) {
+            $this->filtersModel->load(\Yii::$app->request->get());
+            \Yii::$app->session->set($sessionKey, \Yii::$app->request->get());
         }
 
-        return $this;
+
+        //Применение включенных/выключенных фильтров
+        $this->_applyFilters();
     }
-
-
-    private $_autoDynamicModelData = [];
-
     /**
      * This function tries to guess the columns to show from the given data
      * if [[columns]] are not explicitly specified.
@@ -305,8 +241,7 @@ class QueryFiltersWidget extends Widget
         $fields = [];
 
         if ($model instanceof ActiveRecord) {
-            foreach ($model::getTableSchema()->columns as $key => $column)
-            {
+            foreach ($model::getTableSchema()->columns as $key => $column) {
                 if (in_array($column->type, ['string', 'text'])) {
                     $fields[(string)$key] = [
                         'class' => StringFilterField::class,
@@ -345,11 +280,11 @@ class QueryFiltersWidget extends Widget
                                 ];
                             } else {
                                 $fields[(string)$realKey] = [
-                                    'class' => NumberFilterField::class,
+                                    'class'             => NumberFilterField::class,
                                     'isAllowChangeMode' => false,
                                     'field'             => [
-                                        'class' => SelectField::class,
-                                        'items' => function() use ($idName, $query) {
+                                        'class'    => SelectField::class,
+                                        'items'    => function () use ($idName, $query) {
 
                                             return ArrayHelper::map(
                                                 $query->all(),
@@ -357,7 +292,7 @@ class QueryFiltersWidget extends Widget
                                                 'asText'
                                             );
                                         },
-                                        'multiple' => true
+                                        'multiple' => true,
                                     ],
                                 ];
                             }
@@ -401,7 +336,6 @@ class QueryFiltersWidget extends Widget
 
         return $this;
     }
-
     protected function _applyFilters()
     {
         $result = [];
@@ -421,8 +355,47 @@ class QueryFiltersWidget extends Widget
 
         return $this;
     }
+    public function run()
+    {
+        $this->wrapperOptions['id'] = $this->id;
 
+        //Only visibles
+        /*if ($this->filtersModel->builderFields()) {
+            foreach ($this->filtersModel->builderFields() as $key => $field) {
+                if (isset($field['on apply'])) {
 
+                }
+            }
+        }*/
+
+        $builder = new \skeeks\yii2\form\Builder([
+            'models' => $this->filtersModel->builderModels(),
+            'model'  => $this->filtersModel,
+            'fields' => $this->filtersModel->builderFields(),
+        ]);
+
+        if ($builder->fields) {
+
+            foreach ($builder->fields as $field) {
+                $field->trigger('apply', new QueryFiltersEvent([
+                    'field'        => $field,
+                    'widget'       => $this,
+                    'dataProvider' => $this->dataProvider,
+                    'query'        => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
+                ]));
+            }
+        }
+
+        $this->trigger('apply', new QueryFiltersEvent([
+            'widget'       => $this,
+            'dataProvider' => $this->dataProvider,
+            'query'        => isset($this->dataProvider->query) ? $this->dataProvider->query : null,
+        ]));
+
+        return $this->render($this->viewFile, [
+            'builder' => $builder,
+        ]);
+    }
     /**
      * Данные необходимые для редактирования компонента, при открытии нового окна
      * @return array
@@ -433,5 +406,34 @@ class QueryFiltersWidget extends Widget
             'callAttributes'   => $this->callAttributes,
             'availableColumns' => $this->filtersModel->attributeLabels(),
         ];
+    }
+    /**
+     * @return string
+     */
+    public function getFiltersSubmitKey()
+    {
+        return $this->id."-submit-key";
+    }
+    protected function applyColumns()
+    {
+        $result = [];
+        //Есть логика включенных выключенных колонок
+        if ($this->visibleFilters && $this->columns) {
+
+            foreach ($this->visibleColumns as $key) {
+                $result[$key] = ArrayHelper::getValue($this->columns, $key);
+            }
+
+            /*foreach ($this->_resultColumns as $key => $config) {
+                $config['visible'] = false;
+                $this->_resultColumns[$key] = $config;
+            }*/
+
+            /*$result = ArrayHelper::merge($result, $this->_resultColumns);
+            $this->_resultColumns = $result;*/
+            $this->columns = $result;
+        }
+
+        return $this;
     }
 }

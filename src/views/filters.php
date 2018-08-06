@@ -18,7 +18,6 @@ $activeFormClassName = \yii\helpers\ArrayHelper::getValue($widget->activeForm, '
 \yii\helpers\ArrayHelper::remove($widget->activeForm, 'class');
 
 $form = $activeFormClassName::begin((array)$widget->activeForm);
-
 $builder->setActiveForm($form);
 echo $builder->render();
 
