@@ -16,6 +16,7 @@ use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
+use skeeks\yii2\config\storages\ConfigDbModelStorage;
 use skeeks\yii2\form\fields\SelectField;
 use skeeks\yii2\form\fields\WidgetField;
 use yii\base\Model;
@@ -179,7 +180,10 @@ class QueryFiltersWidget extends Widget
         $this->filtersModel->setAttributes((array)$this->filterValues);
 
 
-        $sessionKey = md5($this->configBehavior->configKey.$this->configBehavior->configStorage->modelClassName.$this->configBehavior->configStorage->primaryKey);
+        $sessionKey = md5($this->configBehavior->configKey.
+            ($this->configBehavior->configStorage instanceof ConfigDbModelStorage ? $this->configBehavior->configStorage->modelClassName : "").
+            ($this->configBehavior->configStorage instanceof ConfigDbModelStorage ? $this->configBehavior->configStorage->primaryKey : "")
+        );
 
         if ($sessionData = \Yii::$app->session->get($sessionKey)) {
             $this->filtersModel->load($sessionData);
