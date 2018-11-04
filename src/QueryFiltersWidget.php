@@ -82,6 +82,11 @@ class QueryFiltersWidget extends Widget
      */
     public $wrapperOptions = [];
 
+    public $defaultActiveForm = [
+        'method' => 'get',
+        //'layout' => 'horizontal',
+        'class'  => ActiveForm::class,
+    ];
     /**
      * @var array
      */
@@ -164,14 +169,7 @@ class QueryFiltersWidget extends Widget
         $this->filtersModel = \Yii::createObject($this->filtersModel);
 
 
-        $defaultActiveForm = [
-            //'action' => [''],
-            'method' => 'get',
-            //'layout' => 'horizontal',
-            'class'  => ActiveForm::class,
-        ];
-
-        $this->activeForm = ArrayHelper::merge($defaultActiveForm, $this->activeForm);
+        $this->activeForm = ArrayHelper::merge($this->defaultActiveForm, $this->activeForm);
 
         //$this->_initDataProviderFrom($this->dataProvider);
 
