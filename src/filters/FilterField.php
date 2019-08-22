@@ -130,12 +130,13 @@ class FilterField extends Field
         }
 
         $fullFilterAttribute = $this->filterAttribute;
-
+        
         $query = $queryFiltersEvent->query;
-        if (!strpos(".", $fullFilterAttribute) && $query->modelClass && !$query->from) {
+        if (!strpos($this->filterAttribute, ".") && $query->modelClass && !$query->from) {
             $modelClass = $query->modelClass;
             $tableName = $modelClass::tableName();
             $fullFilterAttribute = "{$tableName}.{$fullFilterAttribute}";
+            
         }
         /*if ($queryFiltersEvent->widget && $queryFiltersEvent->widget->asModelTable && !strpos(".", $fullFilterAttribute)) {
             $fullFilterAttribute = $queryFiltersEvent->widget->asModelTable . "." . $fullFilterAttribute;
