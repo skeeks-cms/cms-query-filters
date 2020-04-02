@@ -73,6 +73,11 @@ class QueryFiltersWidget extends Widget
     public $isEnabledAutoFilters = true;
 
     /**
+     * @var array 
+     */
+    public $disableAutoFilters = [];
+
+    /**
      * @var IHasModel|array|DynamicConfigModel
      */
     public $filtersModel;
@@ -244,6 +249,10 @@ class QueryFiltersWidget extends Widget
 
         if ($model instanceof ActiveRecord) {
             foreach ($model::getTableSchema()->columns as $key => $column) {
+                if (in_array($key, $this->disableAutoFilters)) {
+                    continue;
+                }
+                
                 if (in_array($column->type, ['string', 'text'])) {
                     $fields[(string)$key] = [
                         'class' => StringFilterField::class,
