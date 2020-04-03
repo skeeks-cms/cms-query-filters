@@ -252,7 +252,6 @@ class QueryFiltersWidget extends Widget
                 if (in_array($key, $this->disableAutoFilters)) {
                     continue;
                 }
-                
                 if (in_array($column->type, ['string', 'text'])) {
                     $fields[(string)$key] = [
                         'class' => StringFilterField::class,
