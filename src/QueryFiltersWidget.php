@@ -12,6 +12,7 @@ use skeeks\cms\helpers\PaginationConfig;
 use skeeks\cms\IHasModel;
 use skeeks\cms\queryfilters\filters\NumberFilterField;
 use skeeks\cms\queryfilters\filters\StringFilterField;
+use skeeks\cms\widgets\AjaxSelectModel;
 use skeeks\cms\widgets\DualSelect;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
@@ -282,9 +283,26 @@ class QueryFiltersWidget extends Widget
                             $idName = $arr[0];
                             $modelClassName = $relation->modelClass;
 
-                            $query = $modelClassName::find();
 
-                            if ($query->count() > 1000) {
+                            $fields[(string)$realKey] = [
+                                'class'             => NumberFilterField::class,
+                                'isAllowChangeMode' => false,
+                                'field'             => [
+                                    'class'    => WidgetField::class,
+                                    'widgetClass' => AjaxSelectModel::class,
+                                    'widgetConfig' => [
+                                        'modelClass' => $modelClassName,
+                                        'multiple' => true,
+                                    ],
+                                    /*'class'    => AjaxSelectModel::class,
+                                    'modelClassName' => $modelClassName,
+                                    'multiple' => true,*/
+                                ],
+                            ];
+
+                            //$query = $modelClassName::find();
+
+                            /*if ($query->count() > 1000) {
                                 $fields[(string)$realKey] = [
                                     'class' => NumberFilterField::class,
                                 ];
@@ -305,7 +323,7 @@ class QueryFiltersWidget extends Widget
                                         'multiple' => true,
                                     ],
                                 ];
-                            }
+                            }*/
 
                         }
 
