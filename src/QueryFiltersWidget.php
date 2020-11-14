@@ -175,6 +175,8 @@ class QueryFiltersWidget extends Widget
         if (\Yii::$app->request->get($this->filtersSubmitKey)) {
             $this->filtersModel->load(\Yii::$app->request->get());
             \Yii::$app->session->set($sessionKey, \Yii::$app->request->get());
+        } else if (\Yii::$app->request->get()) {
+            $this->filtersModel->load(\Yii::$app->request->get());
         }
 
 
