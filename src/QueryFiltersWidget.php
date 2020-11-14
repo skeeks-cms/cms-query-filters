@@ -140,22 +140,6 @@ class QueryFiltersWidget extends Widget
         ]);
     }
 
-    /*public $asModelTable = '';
-
-    protected function _initDataProviderFrom(ActiveDataProvider $dataProvider) {
-
-        /**
-         * @var $query ActiveQuery
-        $query = $dataProvider->query;
-        if ($query && $query->modelClass && !$query->from) {
-
-            $modelClass = $query->modelClass;
-            $tableName = $modelClass::tableName();
-
-            $this->asModelTable = 'fff';
-            $query->from([$this->asModelTable => $tableName]);
-        }
-    }*/
     /**
      *
      */
@@ -171,18 +155,13 @@ class QueryFiltersWidget extends Widget
 
         $defaultFiltersModel = ArrayHelper::merge((array)$this->_autoDynamicModelData, $defaultFiltersModel);
 
-        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
-        $this->filtersModel = \Yii::createObject($this->filtersModel);
-
-
-        $this->activeForm = ArrayHelper::merge($this->defaultActiveForm, $this->activeForm);
-
-        //$this->_initDataProviderFrom($this->dataProvider);
-
         parent::init();
 
-        $this->filtersModel->setAttributes((array)$this->filterValues);
+        $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
+        $this->filtersModel = \Yii::createObject($this->filtersModel);
+        $this->activeForm = ArrayHelper::merge($this->defaultActiveForm, $this->activeForm);
 
+        $this->filtersModel->setAttributes((array)$this->filterValues);
 
         $sessionKey = md5($this->configBehavior->configKey.
             ($this->configBehavior->configStorage instanceof ConfigDbModelStorage ? $this->configBehavior->configStorage->modelClassName : "").
