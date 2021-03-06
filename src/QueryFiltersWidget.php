@@ -18,7 +18,6 @@ use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
 use skeeks\yii2\config\storages\ConfigDbModelStorage;
-use skeeks\yii2\form\fields\SelectField;
 use skeeks\yii2\form\fields\WidgetField;
 use yii\base\Model;
 use yii\base\Widget;
@@ -68,20 +67,22 @@ class QueryFiltersWidget extends Widget
      */
     public $configBehaviorData = [];
 
-    /**
-     * @var bool генерировать фильтры автоматически
-     */
-    public $isEnabledAutoFilters = true;
 
     /**
-     * @var array 
+     * @var array
+     */
+    public $autoFilters = [];
+    /**
+     * @var array
      */
     public $disableAutoFilters = [];
+
 
     /**
      * @var IHasModel|array|DynamicConfigModel
      */
     public $filtersModel;
+
 
     /**
      * @var array
@@ -100,14 +101,21 @@ class QueryFiltersWidget extends Widget
         //'class' => ActiveForm::class
     ];
     private $_autoDynamicModelData = [];
+
+    /**
+     * @var array Additional information in the context of a call widget
+     */
+    public $contextData = [];
+
     public function behaviors()
     {
         return ArrayHelper::merge(parent::behaviors(), [
             ConfigBehavior::class => ArrayHelper::merge([
                 'class'       => ConfigBehavior::class,
                 'configModel' => [
-                    'fields'           => [
+                    'fields' => [
                         'visibleFilters' => [
+                            'label'           => 'Отображаемые фильтры',
                             'class'           => WidgetField::class,
                             'widgetClass'     => DualSelect::class,
                             'widgetConfig'    => [
@@ -116,13 +124,17 @@ class QueryFiltersWidget extends Widget
                             ],
                             'on beforeRender' => function ($e) {
                                 $widgetField = $e->sender;
-                                $widgetField->widgetConfig['items'] = ArrayHelper::getValue(
+                                $fields = $this->getAvailableFields(\Yii::$app->controller->getCallableData());
+                                $widgetField->widgetConfig['items'] = $this->getFilteredAvailableFields($fields, \Yii::$app->controller->getCallableData());
+
+                                /*$widgetField->widgetConfig['items'] = ArrayHelper::getValue(
                                     \Yii::$app->controller->getCallableData(),
                                     'availableColumns'
-                                );
+                                );*/
                             },
                         ],
                     ],
+
                     'attributeDefines' => [
                         'visibleFilters',
                         'filterValues',
@@ -135,16 +147,62 @@ class QueryFiltersWidget extends Widget
                         ['visibleFilters', 'safe'],
                         ['filterValues', 'safe'],
                     ],
+
                 ],
             ], (array)$this->configBehaviorData),
         ]);
     }
+
+
+    /**
+     * @param $callableData
+     * @return array
+     */
+    public function getAvailableFields($callableData)
+    {
+        return (array)ArrayHelper::getValue(
+            $callableData,
+            'availableColumns'
+        );
+    }
+
+    /**
+     * @param $fields
+     * @return array
+     */
+    public function getFilteredAvailableFields($fields, $callableData)
+    {
+        $result = [];
+
+        $autoFilters = (array) ArrayHelper::getValue($callableData, 'callAttributes.autoFilters');
+        $disableAutoFilters = (array) ArrayHelper::getValue($callableData, 'callAttributes.disableAutoFilters');
+
+        foreach ($fields as $key => $value) {
+            if (is_array($autoFilters) && $autoFilters && !in_array($key, $autoFilters)) {
+                continue;
+            }
+
+            if (in_array($key, $disableAutoFilters)) {
+                continue;
+            }
+
+            $result[$key] = $value;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @var callable
+     */
+    public $fieldConfigCallback = null;
 
     /**
      *
      */
     public function init()
     {
+
         $defaultFiltersModel = [
             'class'    => DynamicConfigModel::class,
             'formName' => 'f'.$this->id,
@@ -158,8 +216,24 @@ class QueryFiltersWidget extends Widget
         parent::init();
 
         $this->filtersModel = ArrayHelper::merge($defaultFiltersModel, (array)$this->filtersModel);
+
+        //Конфиг некоторых колонок включается только если они вообще включены
+        //Используется $columnConfigCallback
+        $this->_initDynamycFields();
+
+        /*if ($this->filtersModel['fields']) {
+            foreach ($this->filtersModel['fields'] as $field => $fieldData)
+            {
+                if (!ArrayHelper::getValue($this->filtersModel['attributeLabels'], $field)) {
+                    $this->filtersModel['attributeLabels'][$field] = ArrayHelper::getValue($fieldData, "label");
+                }
+            }
+        }*/
+
+
         $this->filtersModel = \Yii::createObject($this->filtersModel);
         $this->activeForm = ArrayHelper::merge($this->defaultActiveForm, $this->activeForm);
+
 
         $this->filtersModel->setAttributes((array)$this->filterValues);
 
@@ -183,6 +257,33 @@ class QueryFiltersWidget extends Widget
         //Применение включенных/выключенных фильтров
         $this->_applyFilters();
     }
+
+    /**
+     * @return $this
+     */
+    protected function _initDynamycFields()
+    {
+        $fields = ArrayHelper::getValue($this->filtersModel, 'fields');
+
+        if ($this->fieldConfigCallback && is_callable($this->fieldConfigCallback)) {
+            $callback = $this->fieldConfigCallback;
+            if ($this->visibleFilters && is_array($this->visibleFilters)) {
+                foreach ($this->visibleFilters as $code) {
+
+                    if (!isset($fields[$code])) {
+                        $fields[$code] = call_user_func($callback, $code, $this);
+                    }
+                }
+            }
+
+            $this->filtersModel['fields'] = $fields;
+        }
+
+
+
+        return $this;
+    }
+
     /**
      * This function tries to guess the columns to show from the given data
      * if [[columns]] are not explicitly specified.
@@ -190,7 +291,7 @@ class QueryFiltersWidget extends Widget
     protected function _initAutoFilters()
     {
         //Если автоопределение колонок не включено
-        if (!$this->isEnabledAutoFilters) {
+        if ($this->autoFilters === false) {
             return $this;
         }
 
@@ -231,9 +332,15 @@ class QueryFiltersWidget extends Widget
 
         if ($model instanceof ActiveRecord) {
             foreach ($model::getTableSchema()->columns as $key => $column) {
+
+                if (is_array($this->autoFilters) && $this->autoFilters && !in_array($key, $this->autoFilters)) {
+                    continue;
+                }
+
                 if (in_array($key, $this->disableAutoFilters)) {
                     continue;
                 }
+
                 if (in_array($column->type, ['string', 'text'])) {
                     $fields[(string)$key] = [
                         'class' => StringFilterField::class,
@@ -269,43 +376,17 @@ class QueryFiltersWidget extends Widget
                                 'class'             => NumberFilterField::class,
                                 'isAllowChangeMode' => false,
                                 'field'             => [
-                                    'class'    => WidgetField::class,
-                                    'widgetClass' => AjaxSelectModel::class,
+                                    'class'        => WidgetField::class,
+                                    'widgetClass'  => AjaxSelectModel::class,
                                     'widgetConfig' => [
                                         'modelClass' => $modelClassName,
-                                        'multiple' => true,
+                                        'multiple'   => true,
                                     ],
                                     /*'class'    => AjaxSelectModel::class,
                                     'modelClassName' => $modelClassName,
                                     'multiple' => true,*/
                                 ],
                             ];
-
-                            //$query = $modelClassName::find();
-
-                            /*if ($query->count() > 1000) {
-                                $fields[(string)$realKey] = [
-                                    'class' => NumberFilterField::class,
-                                ];
-                            } else {
-                                $fields[(string)$realKey] = [
-                                    'class'             => NumberFilterField::class,
-                                    'isAllowChangeMode' => false,
-                                    'field'             => [
-                                        'class'    => SelectField::class,
-                                        'items'    => function () use ($idName, $query) {
-
-                                            return ArrayHelper::map(
-                                                $query->all(),
-                                                $idName,
-                                                'asText'
-                                            );
-                                        },
-                                        'multiple' => true,
-                                    ],
-                                ];
-                            }*/
-
                         }
 
                     }
@@ -339,12 +420,20 @@ class QueryFiltersWidget extends Widget
             }
         }
 
+        $enabledFields = array_keys($fields);
+        foreach ($result['attributeLabels'] as $key => $value) {
+            if (!in_array($key, $enabledFields)) {
+                ArrayHelper::remove($result['attributeLabels'], $key);
+            }
+        }
+
         $result['rules'] = $rules;
         $result['fields'] = $fields;
         $this->_autoDynamicModelData = $result;
 
         return $this;
     }
+
     protected function _applyFilters()
     {
         $result = [];
@@ -364,6 +453,8 @@ class QueryFiltersWidget extends Widget
 
         return $this;
     }
+
+
     public function run()
     {
         $this->wrapperOptions['id'] = $this->id;
@@ -423,6 +514,8 @@ class QueryFiltersWidget extends Widget
     {
         return $this->id."-submit-key";
     }
+
+
     protected function applyColumns()
     {
         $result = [];

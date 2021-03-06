@@ -240,10 +240,10 @@ class FilterField extends Field
         }
 
         $activeField->parts['{input}'] = "
-            <div class='row' id='{$this->id}'>           
-                <div class='col-md-4' {$style}>{$mode}</div>            
-                <div class='col-md-4 sx-input-wrapper'>".$activeField->parts['{input}']."</div>         
-                <div class='col-md-4 sx-input-wrapper-2'>{$input2}</div>           
+            <div class='d-flex' id='{$this->id}'>           
+                <div class='sx-filter-mode-wrapper' {$style}>{$mode}</div>            
+                <div class='sx-input-wrapper'>".$activeField->parts['{input}']."</div>         
+                <div class='sx-input-wrapper-2'>{$input2}</div>           
             </div>
         ";
 
@@ -290,15 +290,19 @@ JS
         
         update: function()
         {
-            var big = 'col-md-8';
+            /*var big = 'col-md-8';
             var small = 'col-md-4';
             
             if (!this.get('isAllowChangeMode')) {
                 var big = 'col-md-12'
                 var small = 'col-md-6'
-            }
+            }*/
             
-            this.jFilterInput.removeClass('col-md-4').removeClass('col-md-6').removeClass('col-md-12').addClass(small);
+            /*this.jFilterInput
+                .removeClass('col-md-4')
+                .removeClass('col-md-6')
+                .removeClass('col-md-12')
+                .addClass(small);*/
             
             this.jFilterInput.hide();
             this.jFilterInput2.hide();
@@ -317,7 +321,11 @@ JS
                 }
                 
                 if (jModeOption.data('isvalue') && !jModeOption.data('isvalue2')) {
-                    this.jFilterInput.removeClass('col-md-4').removeClass('col-md-6').removeClass('col-md-12').addClass(big);
+                    /*this.jFilterInput
+                    .removeClass('col-md-4')
+                    .removeClass('col-md-6')
+                    .removeClass('col-md-12')
+                    .addClass(big);*/
                 }
             }
             
