@@ -239,13 +239,16 @@ class FilterField extends Field
             $style = "style='display:none;'";
         }
 
-        $activeField->parts['{input}'] = "
-            <div class='d-flex' id='{$this->id}'>           
-                <div class='sx-filter-mode-wrapper' {$style}>{$mode}</div>            
-                <div class='sx-input-wrapper'>".$activeField->parts['{input}']."</div>         
-                <div class='sx-input-wrapper-2'>{$input2}</div>           
-            </div>
-        ";
+        if (isset($activeField->parts)) {
+            $activeField->parts['{input}'] = "
+                <div class='d-flex' id='{$this->id}'>           
+                    <div class='sx-filter-mode-wrapper' {$style}>{$mode}</div>            
+                    <div class='sx-input-wrapper'>".$activeField->parts['{input}']."</div>         
+                    <div class='sx-input-wrapper-2'>{$input2}</div>           
+                </div>
+            ";
+        }
+        
 
         $jsOptions = Json::encode([
             'id' => $this->id,
