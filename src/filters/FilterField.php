@@ -59,19 +59,22 @@ class FilterField extends Field
      */
     public $modes = [];
 
+    /**
+     * Вызывается перед применением определенного мода
+     * @var callable|null
+     */
+    public $beforeModeApplyCallback = null;
+
+    /**
+     * @var bool Добавлять название таблицы к атрибуту?
+     */
+    public $isAddAttributeTableName = true;
+
     public function getBaseModes()
     {
         return [
             FilterModeEmpty::class,
             FilterModeNotEmpty::class,
-
-            /*FilterModeEq::class,
-            FilterModeNe::class,
-            FilterModeGt::class,
-            FilterModeLt::class,
-            FilterModeGte::class,
-            FilterModeLte::class,
-            FilterModeLike::class,*/
         ];
     }
     /**
@@ -102,6 +105,7 @@ class FilterField extends Field
 
         $this->on('apply', [$this, '_applyEvent']);
     }
+
     public function _applyEvent(QueryFiltersEvent $queryFiltersEvent)
     {
         $value = $queryFiltersEvent->field->value;
@@ -132,22 +136,24 @@ class FilterField extends Field
         $fullFilterAttribute = $this->filterAttribute;
         
         $query = $queryFiltersEvent->query;
-        if (!strpos($this->filterAttribute, ".") && $query->modelClass && !$query->from) {
-            $modelClass = $query->modelClass;
-            $tableName = $modelClass::tableName();
-            $fullFilterAttribute = "{$tableName}.{$fullFilterAttribute}";
-            
+
+        if ($this->isAddAttributeTableName) {
+            if (!strpos($this->filterAttribute, ".") && $query->modelClass && !$query->from) {
+                $modelClass = $query->modelClass;
+                $tableName = $modelClass::tableName();
+                $fullFilterAttribute = "{$tableName}.{$fullFilterAttribute}";
+            }
         }
-        /*if ($queryFiltersEvent->widget && $queryFiltersEvent->widget->asModelTable && !strpos(".", $fullFilterAttribute)) {
-            $fullFilterAttribute = $queryFiltersEvent->widget->asModelTable . "." . $fullFilterAttribute;
-        }*/
-        /*
-        $modelClassName = $queryFiltersEvent->widget->modelClassName;
-        $tableName = $modelClassName::tableName();
-        $fullFilterAttribute = $tableName . "." . $this->filterAttribute;*/
+
 
         $filterMode->attributeName = $fullFilterAttribute;
 
+        if ($this->beforeModeApplyCallback && is_callable($this->beforeModeApplyCallback)) {
+            $userCallback = call_user_func($this->beforeModeApplyCallback, $queryFiltersEvent, $this);
+            if (!$userCallback) {
+                return true;
+            }
+        }
         $filterMode->applyQuery($queryFiltersEvent->query);
     }
     /**

@@ -11,7 +11,7 @@ namespace skeeks\cms\queryfilters\filters\modes;
 use skeeks\cms\queryfilters\filters\FilterField;
 use yii\db\ActiveQuery;
 
-class FilterModeRange extends FilterMode
+class FilterModeRange extends NumberFilterMode
 {
     const ID = 'range';
 
@@ -39,10 +39,10 @@ class FilterModeRange extends FilterMode
     public function applyQuery(ActiveQuery $activeQuery)
     {
         if ($this->value) {
-            $activeQuery->andWhere([">=", $this->attributeName, $this->value]);
+            $activeQuery->{$this->getAndWhereQuery()}([">=", $this->attributeName, $this->value]);
         }
         if ($this->value2) {
-            $activeQuery->andWhere(["<=", $this->attributeName, $this->value2]);
+            $activeQuery->{$this->getAndWhereQuery()}(["<=", $this->attributeName, $this->value2]);
         }
     }
 

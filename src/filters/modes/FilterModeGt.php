@@ -15,7 +15,7 @@ use skeeks\cms\traits\THasName;
 use yii\base\Component;
 use yii\db\ActiveQuery;
 
-class FilterModeGt extends FilterMode
+class FilterModeGt extends NumberFilterMode
 {
     const ID = 'gt';
 
@@ -45,7 +45,7 @@ class FilterModeGt extends FilterMode
             return;
         }
         
-        $activeQuery->andWhere([">", $this->attributeName, $this->value]);
+        $activeQuery->{$this->getAndWhereQuery()}([">", $this->attributeName, $this->value]);
     }
 
 
