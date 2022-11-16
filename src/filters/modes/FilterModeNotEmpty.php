@@ -19,6 +19,19 @@ class FilterModeNotEmpty extends FilterMode
 {
     const ID = 'not_empty';
 
+    /**
+     * @var bool
+     */
+    public $isHaving = false;
+
+    /**
+     * @return string
+     */
+    public function getAndWhereQuery()
+    {
+        return $this->isHaving ? "andHaving" : "andWhere";
+    }
+
     public function init()
     {
         if (!$this->name) {
@@ -33,7 +46,7 @@ class FilterModeNotEmpty extends FilterMode
      */
     public function applyQuery(ActiveQuery $activeQuery)
     {
-        $activeQuery->andWhere([
+        $activeQuery->{$this->getAndWhereQuery()}([
             'or',
             ['!=', $this->attributeName, ''],
             ['is not', $this->attributeName, null],
