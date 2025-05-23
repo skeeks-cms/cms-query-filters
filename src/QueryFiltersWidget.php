@@ -14,15 +14,18 @@ use skeeks\cms\queryfilters\filters\NumberFilterField;
 use skeeks\cms\queryfilters\filters\StringFilterField;
 use skeeks\cms\widgets\AjaxSelectModel;
 use skeeks\cms\widgets\DualSelect;
+use skeeks\cms\widgets\formInputs\daterange\DaterangeInputWidget;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
 use skeeks\yii2\config\storages\ConfigDbModelStorage;
+use skeeks\yii2\form\fields\TextField;
 use skeeks\yii2\form\fields\WidgetField;
 use yii\base\Model;
 use yii\base\Widget;
 use yii\data\ActiveDataProvider;
 use yii\data\DataProviderInterface;
+use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
@@ -67,6 +70,7 @@ class QueryFiltersWidget extends Widget
      */
     public $configBehaviorData = [];
 
+    public $search_param_name = "q";
 
     /**
      * @var array
@@ -76,7 +80,6 @@ class QueryFiltersWidget extends Widget
      * @var array
      */
     public $disableAutoFilters = [];
-
 
     /**
      * @var IHasModel|array|DynamicConfigModel
@@ -209,7 +212,9 @@ class QueryFiltersWidget extends Widget
         ];
 
         //Автомтическое конфигурирование колонок
-        $this->_initAutoFilters();
+        $this->_initAutoFilters()->_initSearchFilter();
+
+        $this->visibleFilters = ArrayHelper::merge($this->visibleFilters, [$this->search_param_name]);
 
         $defaultFiltersModel = ArrayHelper::merge((array)$this->_autoDynamicModelData, $defaultFiltersModel);
 
@@ -243,13 +248,17 @@ class QueryFiltersWidget extends Widget
         );
 
         if ($sessionData = \Yii::$app->session->get($sessionKey)) {
-            $this->filtersModel->load($sessionData);
+            //$this->filtersModel->load($sessionData);
         }
 
-        if (\Yii::$app->request->get($this->filtersSubmitKey)) {
+        /*if (\Yii::$app->request->get($this->filtersSubmitKey)) {
             $this->filtersModel->load(\Yii::$app->request->get());
             \Yii::$app->session->set($sessionKey, \Yii::$app->request->get());
         } else if (\Yii::$app->request->get()) {
+            $this->filtersModel->load(\Yii::$app->request->get());
+        }*/
+
+        if (\Yii::$app->request->get()) {
             $this->filtersModel->load(\Yii::$app->request->get());
         }
 
@@ -285,8 +294,48 @@ class QueryFiltersWidget extends Widget
     }
 
     /**
-     * This function tries to guess the columns to show from the given data
-     * if [[columns]] are not explicitly specified.
+     * @return $this
+     */
+    protected function _initSearchFilter() {
+
+        if ($this->search_param_name === false) {
+            return $this;
+        }
+
+        $rules = ArrayHelper::getValue($this->_autoDynamicModelData, 'rules', []);
+        $attributeDefines = ArrayHelper::getValue($this->_autoDynamicModelData, 'attributeDefines', []);
+        $fields = ArrayHelper::getValue($this->_autoDynamicModelData, 'fields', []);
+
+        $this->_autoDynamicModelData['rules'] = ArrayHelper::merge($rules, [[$this->search_param_name, 'safe']]);
+        $this->_autoDynamicModelData['attributeDefines'] = ArrayHelper::merge($attributeDefines, [$this->search_param_name]);
+
+
+        $searchField = [
+            'label'          => 'Поиск',
+            'elementOptions' => [
+                'autocomplete' => 'off',
+                'placeholder' => 'Фильтры + поиск',
+            ],
+            'on apply'       => function (QueryFiltersEvent $e) {
+                /**
+                 * @var $query ActiveQuery
+                 */
+                $query = $e->dataProvider->query;
+
+                if ($e->field->value) {
+                    $query->search($e->field->value);
+                }
+            },
+        ];
+
+        $this->_autoDynamicModelData['fields'] = ArrayHelper::merge($fields, [$this->search_param_name => $searchField]);
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     * @throws \yii\base\InvalidConfigException
      */
     protected function _initAutoFilters()
     {
@@ -341,7 +390,44 @@ class QueryFiltersWidget extends Widget
                     continue;
                 }
 
-                if (in_array($column->type, ['string', 'text'])) {
+                //ID всегда точный поиск
+                /*if ($key == "id") {
+                    $fields[(string)$key] = [
+                        'class'             => NumberFilterField::class,
+                        'isAllowChangeMode' => false,
+                    ];
+                }*/
+                //Поля типо updated_at, created_at, start_at, end_at то есть время
+                if (strpos($key, "_at") !== false) {
+
+                    $fields[(string)$key] = [
+                        'class' => WidgetField::class,
+                        'widgetClass'  => DaterangeInputWidget::class,
+                        'on apply'       => function (QueryFiltersEvent $e) use ($key) {
+                            /**
+                             * @var $query ActiveQuery
+                             */
+                            $query = $e->dataProvider->query;
+
+                            if ($e->field->value) {
+                                $data = explode("-", $e->field->value);
+                                $start = strtotime(trim(ArrayHelper::getValue($data, 0) . " 00:00:00"));
+                                $end = strtotime(trim(ArrayHelper::getValue($data, 1) .  " 23:59:59"));
+
+                                $query->andWhere(['>=', $key, $start]);
+                                $query->andWhere(['<=', $key, $end]);
+
+
+                            }
+                        },
+                        /*'widgetConfig' => [
+                            'options' => [
+                                'placeholder' => 'Диапазон дат'
+                            ],
+                        ],*/
+                    ];
+
+                } elseif (in_array($column->type, ['string', 'text'])) {
                     $fields[(string)$key] = [
                         'class' => StringFilterField::class,
                     ];
@@ -429,6 +515,7 @@ class QueryFiltersWidget extends Widget
 
         $result['rules'] = $rules;
         $result['fields'] = $fields;
+
         $this->_autoDynamicModelData = $result;
 
         return $this;
@@ -438,6 +525,8 @@ class QueryFiltersWidget extends Widget
     {
         $result = [];
         $fields = $this->filtersModel->builderFields();
+
+        $this->visibleFilters = ArrayHelper::merge((array) $this->visibleFilters, [$this->search_param_name]);
 
         //Есть логика включенных выключенных колонок
         if ($this->visibleFilters && $fields) {
@@ -520,6 +609,8 @@ class QueryFiltersWidget extends Widget
     {
         $result = [];
         //Есть логика включенных выключенных колонок
+
+
         if ($this->visibleFilters && $this->columns) {
 
             foreach ($this->visibleColumns as $key) {

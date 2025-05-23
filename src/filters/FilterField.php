@@ -209,16 +209,20 @@ class FilterField extends Field
 
 
         $modes = [
-            'none' => ' -- ',
+            //'none' => ' -- ',
         ];
         $modesOptions = [];
         if ($this->modes) {
 
+            $modesHtml = '';
             foreach ($this->modes as $key => $mode) {
                 if (!$mode instanceof FilterMode) {
                     //var_dump($mode);die;
                 }
                 $modes[$key] = $mode->name;
+
+                $modesHtml .= '<a class="dropdown-item" data-mode="' . $key . '" href="#">' . $mode->name . '</a>';
+
                 $modesOptions[$key] = [
                     'data-isValue'  => (int)$mode->isValue,
                     'data-isValue2' => (int)$mode->isValue2,
@@ -239,6 +243,18 @@ class FilterField extends Field
         
         $mode = (string)Html::activeListBox($this->model, $this->attribute."[mode]", $modes, $opts);
 
+        $dropdownMode = <<<HTML
+<div class="sx-mode-title"></div>
+<div class="dropdown">
+  <a class="" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+    <i class="hs-admin-settings g-absolute-centered"></i>
+  </a>
+  <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+    {$modesHtml}
+  </div>
+</div>
+HTML;
+
         $style = '';
         
         if (!$this->isAllowChangeMode) {
@@ -247,10 +263,13 @@ class FilterField extends Field
 
         if (isset($activeField->parts)) {
             $activeField->parts['{input}'] = "
-                <div class='d-flex' id='{$this->id}'>           
-                    <div class='sx-filter-mode-wrapper' {$style}>{$mode}</div>            
+                <div class='d-flex-filter' id='{$this->id}'>           
+                             
                     <div class='sx-input-wrapper'>".$activeField->parts['{input}']."</div>         
-                    <div class='sx-input-wrapper-2'>{$input2}</div>           
+                    <div class='sx-input-wrapper-2'>{$input2}</div>     
+                    <div class='sx-filter-mode-wrapper' data-default-mode='{$this->defaultMode}' {$style}>
+                    {$dropdownMode}{$mode}
+                    </div>         
                 </div>
             ";
         }
@@ -274,6 +293,40 @@ JS
         if (!static::$_isRegisteredAssets) {
             static::$_isRegisteredAssets = true;
 
+            \Yii::$app->view->registerCss(<<<CSS
+.d-flex-filter {
+    display: flex;
+    justify-content: right;
+}
+.sx-filter-mode-wrapper {
+    display: flex;
+    align-items: center;
+    padding-left: 1rem;
+}
+.sx-filter-mode-wrapper .dropdown i {
+    opacity: 0.3;
+    transition: right .3s, opacity .3s;
+}
+.sx-filter-mode-wrapper .dropdown a:hover i {
+    opacity: 1;
+}
+.sx-filter-mode-wrapper .sx-mode-title {
+    font-size: 0.8rem;
+    padding-right: 1rem;
+}
+.sx-filter-mode-wrapper .dropdown a {
+    cursor: pointer;
+}
+.sx-filter-mode-wrapper select {
+    display: none !important;
+}
+.sx-filter-mode-wrapper .dropdown-item.sx-selected {
+    color: white;
+    background: var(--primary-color);
+}
+CSS
+            );
+
             \Yii::$app->view->registerJs(<<<JS
 (function(sx, $, _)
 {
@@ -292,29 +345,50 @@ JS
             this.update();
             
             this.jFilterMode.on('change', function () {
+                var jWrapper = $(this).closest(".sx-filter-mode-wrapper");
+                jWrapper.trigger("render");
                 self.update();
+                
                 return false;
+            });
+            
+            $(".sx-filter-mode-wrapper").on("render", function() {
+                var jWrapper = $(this);
+                
+                var jSelect = $("select", jWrapper);
+                var jTitle = $(".sx-mode-title", jWrapper);
+                
+                $(".dropdown-item", jWrapper).removeClass("sx-selected");
+                var jItem = $(".dropdown-item[data-mode=" + jSelect.val() + "]", jWrapper);
+                jItem.addClass("sx-selected");
+                
+                //Мод изменился
+                if (jWrapper.data("default-mode") != jSelect.val()) {
+                    jTitle.empty().show().append(jItem.text());
+                } else {
+                    jTitle.empty().hide();
+                }
+            })
+            
+            $(".sx-filter-mode-wrapper").each(function() {
+                $(this).trigger("render");
+            });
+            
+            $(".sx-filter-mode-wrapper .dropdown-item").on("click", function() {
+                var jWrapper = $(this).closest(".sx-filter-mode-wrapper");
+                
+                var jSelect = $("select", jWrapper);
+                jSelect.val($(this).data("mode"));
+                jSelect.trigger("change");
+                
             });
         },
         
+        
         update: function()
         {
-            /*var big = 'col-md-8';
-            var small = 'col-md-4';
-            
-            if (!this.get('isAllowChangeMode')) {
-                var big = 'col-md-12'
-                var small = 'col-md-6'
-            }*/
-            
-            /*this.jFilterInput
-                .removeClass('col-md-4')
-                .removeClass('col-md-6')
-                .removeClass('col-md-12')
-                .addClass(small);*/
-            
-            this.jFilterInput.hide();
-            this.jFilterInput2.hide();
+            this.jFilterInput.hide().addClass("sx-hidden");
+            this.jFilterInput2.hide().addClass("sx-hidden");
             
             var mode = this.jFilterMode.val();
             
@@ -322,19 +396,15 @@ JS
                 var jModeOption = $("option[value=" + mode + "]", this.jFilterMode);
                 
                 if (jModeOption.data('isvalue')) {
-                    this.jFilterInput.show();
+                    this.jFilterInput.show().removeClass("sx-hidden");
                 }
                 
                 if (jModeOption.data('isvalue2')) {
-                    this.jFilterInput2.show();
+                    this.jFilterInput2.show().removeClass("sx-hidden");
                 }
                 
                 if (jModeOption.data('isvalue') && !jModeOption.data('isvalue2')) {
-                    /*this.jFilterInput
-                    .removeClass('col-md-4')
-                    .removeClass('col-md-6')
-                    .removeClass('col-md-12')
-                    .addClass(big);*/
+                 
                 }
             }
             
