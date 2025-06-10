@@ -14,12 +14,11 @@ use skeeks\cms\queryfilters\filters\NumberFilterField;
 use skeeks\cms\queryfilters\filters\StringFilterField;
 use skeeks\cms\widgets\AjaxSelectModel;
 use skeeks\cms\widgets\DualSelect;
-use skeeks\cms\widgets\formInputs\daterange\DaterangeInputWidget;
+use skeeks\cms\widgets\formInputs\selectTree\SelectTreeInputWidget;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
 use skeeks\yii2\config\DynamicConfigModel;
 use skeeks\yii2\config\storages\ConfigDbModelStorage;
-use skeeks\yii2\form\fields\TextField;
 use skeeks\yii2\form\fields\WidgetField;
 use yii\base\Model;
 use yii\base\Widget;
@@ -177,8 +176,8 @@ class QueryFiltersWidget extends Widget
     {
         $result = [];
 
-        $autoFilters = (array) ArrayHelper::getValue($callableData, 'callAttributes.autoFilters');
-        $disableAutoFilters = (array) ArrayHelper::getValue($callableData, 'callAttributes.disableAutoFilters');
+        $autoFilters = (array)ArrayHelper::getValue($callableData, 'callAttributes.autoFilters');
+        $disableAutoFilters = (array)ArrayHelper::getValue($callableData, 'callAttributes.disableAutoFilters');
 
         foreach ($fields as $key => $value) {
             if (is_array($autoFilters) && $autoFilters && !in_array($key, $autoFilters)) {
@@ -289,14 +288,14 @@ class QueryFiltersWidget extends Widget
         }
 
 
-
         return $this;
     }
 
     /**
      * @return $this
      */
-    protected function _initSearchFilter() {
+    protected function _initSearchFilter()
+    {
 
         if ($this->search_param_name === false) {
             return $this;
@@ -314,7 +313,7 @@ class QueryFiltersWidget extends Widget
             'label'          => 'Поиск',
             'elementOptions' => [
                 'autocomplete' => 'off',
-                'placeholder' => 'Фильтры + поиск',
+                'placeholder'  => 'Фильтры + поиск',
             ],
             'on apply'       => function (QueryFiltersEvent $e) {
                 /**
@@ -401,9 +400,9 @@ class QueryFiltersWidget extends Widget
                 if (strpos($key, "_at") !== false) {
 
                     $fields[(string)$key] = [
-                        'class' => WidgetField::class,
-                        'widgetClass'  => DaterangeInputWidget::class,
-                        'on apply'       => function (QueryFiltersEvent $e) use ($key) {
+                        'class'       => WidgetField::class,
+                        'widgetClass' => SelectTreeInputWidget::class,
+                        'on apply'    => function (QueryFiltersEvent $e) use ($key) {
                             /**
                              * @var $query ActiveQuery
                              */
@@ -411,8 +410,8 @@ class QueryFiltersWidget extends Widget
 
                             if ($e->field->value) {
                                 $data = explode("-", $e->field->value);
-                                $start = strtotime(trim(ArrayHelper::getValue($data, 0) . " 00:00:00"));
-                                $end = strtotime(trim(ArrayHelper::getValue($data, 1) .  " 23:59:59"));
+                                $start = strtotime(trim(ArrayHelper::getValue($data, 0)." 00:00:00"));
+                                $end = strtotime(trim(ArrayHelper::getValue($data, 1)." 23:59:59"));
 
                                 $query->andWhere(['>=', $key, $start]);
                                 $query->andWhere(['<=', $key, $end]);
@@ -526,7 +525,7 @@ class QueryFiltersWidget extends Widget
         $result = [];
         $fields = $this->filtersModel->builderFields();
 
-        $this->visibleFilters = ArrayHelper::merge((array) $this->visibleFilters, [$this->search_param_name]);
+        $this->visibleFilters = ArrayHelper::merge((array)$this->visibleFilters, [$this->search_param_name]);
 
         //Есть логика включенных выключенных колонок
         if ($this->visibleFilters && $fields) {
