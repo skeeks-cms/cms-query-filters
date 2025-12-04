@@ -14,6 +14,7 @@ use skeeks\cms\queryfilters\filters\NumberFilterField;
 use skeeks\cms\queryfilters\filters\StringFilterField;
 use skeeks\cms\widgets\AjaxSelectModel;
 use skeeks\cms\widgets\DualSelect;
+use skeeks\cms\widgets\formInputs\daterange\DaterangeInputWidget;
 use skeeks\cms\widgets\formInputs\selectTree\SelectTreeInputWidget;
 use skeeks\yii2\config\ConfigBehavior;
 use skeeks\yii2\config\ConfigTrait;
@@ -401,7 +402,7 @@ class QueryFiltersWidget extends Widget
 
                     $fields[(string)$key] = [
                         'class'       => WidgetField::class,
-                        'widgetClass' => SelectTreeInputWidget::class,
+                        'widgetClass' => DaterangeInputWidget::class,
                         'on apply'    => function (QueryFiltersEvent $e) use ($key) {
                             /**
                              * @var $query ActiveQuery
