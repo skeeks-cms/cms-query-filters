@@ -127,8 +127,23 @@ class QueryFiltersWidget extends Widget
                             ],
                             'on beforeRender' => function ($e) {
                                 $widgetField = $e->sender;
-                                $fields = $this->getAvailableFields(\Yii::$app->controller->getCallableData());
-                                $widgetField->widgetConfig['items'] = $this->getFilteredAvailableFields($fields, \Yii::$app->controller->getCallableData());
+                                $callableData = \Yii::$app->controller->getCallableData();
+                                $fields = $this->getAvailableFields($callableData);
+                                $ajaxUrl = ArrayHelper::getValue($callableData, 'availableColumnsUrl');
+                                if ($ajaxUrl) {
+                                    $widgetField->widgetConfig['ajaxUrl'] = $ajaxUrl;
+                                }
+
+                                if ($cacheKey = ArrayHelper::getValue($callableData, 'availableColumnsCacheKey')) {
+                                    $cachedFields = (array)\Yii::$app->cache->get($cacheKey);
+                                    foreach ((array)$this->visibleFilters as $fieldCode) {
+                                        if (!array_key_exists($fieldCode, $fields) && array_key_exists($fieldCode, $cachedFields)) {
+                                            $fields[$fieldCode] = $cachedFields[$fieldCode];
+                                        }
+                                    }
+                                }
+
+                                $widgetField->widgetConfig['items'] = $this->getFilteredAvailableFields($fields, $callableData);
 
                                 /*$widgetField->widgetConfig['items'] = ArrayHelper::getValue(
                                     \Yii::$app->controller->getCallableData(),
