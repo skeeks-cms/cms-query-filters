@@ -425,11 +425,9 @@ class QueryFiltersWidget extends Widget
                             $query = $e->dataProvider->query;
 
                             if ($e->field->value) {
-                                if (is_string($e->field->value)) {
-                                    $data = explode("-", (string) $e->field->value);
-                                    $start = strtotime(trim(ArrayHelper::getValue($data, 0)." 00:00:00"));
-                                    $end = strtotime(trim(ArrayHelper::getValue($data, 1)." 23:59:59"));
-    
+                                if ($range = DaterangeInputWidget::parseRange($e->field->value)) {
+                                    list($start, $end) = $range;
+
                                     $query->andWhere(['>=', $key, $start]);
                                     $query->andWhere(['<=', $key, $end]);
                                 }
